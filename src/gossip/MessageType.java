@@ -1,4 +1,4 @@
-package example.gossip;
+package gossip;
 
 public enum MessageType {
 	SHUFFLE_REQUEST, SHUFFLE_REPLY, SHUFFLE_REJECTED

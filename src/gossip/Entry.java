@@ -1,4 +1,4 @@
-package example.gossip;
+package gossip;
 
 import peersim.core.Node;
 
