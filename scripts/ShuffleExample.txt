@@ -20,7 +20,7 @@ protocol.tr UniformRandomTransport
 	maxdelay (CYCLE*MAXDELAY)/100
 }
 
-protocol.gossip example.gossip.BasicShuffle
+protocol.gossip gossip.BasicShuffle
 {
 	# the cache size should be set to 30 and to 50.
 	cacheSize 30
@@ -49,7 +49,7 @@ init.sch CDScheduler
 	protocol gossip
 }
 
-control.degree example.reports.InDegreeObserver
+control.degree reports.InDegreeObserver
 {
 	protocol gossip
 
