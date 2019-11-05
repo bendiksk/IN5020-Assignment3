@@ -1,6 +1,5 @@
 package gossip;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,7 +47,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	private List<Entry> cache;
 	
 	// The maximum size of the cache;
-	private final int size;
+	private final int maxSize;
 	
 	// The maximum length of the shuffle exchange;
 	private final int l;
@@ -69,11 +68,11 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	{
 		this.awaitingReply = false;
 		this.swapSetIndices = new ArrayList<>();
-		this.size = Configuration.getInt(n + "." + PAR_CACHE);
+		this.maxSize = Configuration.getInt(n + "." + PAR_CACHE);
 		this.l = Configuration.getInt(n + "." + PAR_L);
 		this.tid = Configuration.getPid(n + "." + PAR_TRANSPORT);
 
-		cache = new ArrayList<Entry>(size);
+		cache = new ArrayList<Entry>(maxSize);
 	}
 
 	/* START YOUR IMPLEMENTATION FROM HERE
@@ -100,15 +99,16 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		Entry Q = cache.get(qIndex);
 
 		// 4. If P's cache is full, remove Q from the cache;
-		if(cache.size() >= size) {
+		if(cache.size() >= maxSize) {
 			cache.remove(qIndex);
 		}
 		// 5. Select a subset of other l - 1 random neighbors from P's cache;
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
 		// 6. Add P to the subset;
+		System.out.println("1");
 		ArrayList<Entry> subset = createRandomSubset(Q.getNode());
-
+		System.out.println("2");
 		// 7. Send a shuffle request to Q containing the subset;
 		//	  - Keep track of the nodes sent to Q
 		//	  - Example code for sending a message:
@@ -121,7 +121,6 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// 8. From this point on P is waiting for Q's response and will not initiate a new shuffle operation;
 		//
 		// The response from Q will be handled by the method processEvent.
-		
 	}
 
 	private ArrayList<Entry> createRandomSubset(Node nodeToAvoid) {
@@ -132,6 +131,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 			int randomIndex = CommonState.r.nextInt(cache.size());
 			while(swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
 				randomIndex = CommonState.r.nextInt(cache.size());
+				System.out.println("RI: " + randomIndex);
 			};
 			swapSetIndices.add(randomIndex);
 			Entry newEntry = new Entry(cache.get(randomIndex).getNode());
@@ -188,7 +188,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		case SHUFFLE_REJECTED:
 		//	  1. If P was originally removed from Q's cache, add it again to the cache.
             if(!this.contains(sender)) {
-            	if(cache.size() >= size) {
+            	if(cache.size() >= maxSize) {
             		// TODO: Maybe fix in elegant way
             		throw new IllegalStateException("Cache does not have space for rejected node");
 				}
@@ -209,7 +209,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 			if (this.contains(entry.getNode())) {
 			//		 - No neighbor appears twice in the cache
 				continue;
-			} else if(cache.size() < size) {
+			} else if(cache.size() < maxSize) {
 			//		 - Use empty cache slots to add new entries
 				cache.add(new Entry(entry.getNode()));
 			} else {
@@ -241,7 +241,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		if (contains(neighbour))
 			return false;
 
-		if (cache.size() >= size)
+		if (cache.size() >= maxSize)
 			return false;
 
 		Entry entry = new Entry(neighbour);
