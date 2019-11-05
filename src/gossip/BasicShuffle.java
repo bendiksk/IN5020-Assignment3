@@ -187,9 +187,14 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// If the message is a shuffle rejection:
 		case SHUFFLE_REJECTED:
 		//	  1. If P was originally removed from Q's cache, add it again to the cache.
-//            if(!cache.contains()) {
-//
-//            }
+			Node sender = message.getNode();
+            if(!this.contains(sender)) {
+            	if(cache.size() >= size) {
+            		// TODO: Maybe fix in elegant way
+            		throw new IllegalStateException("Cache does not have space for rejected node");
+				}
+				cache.add(new Entry(sender));
+            }
 		//	  2. Q is no longer waiting for a shuffle reply;
 			awaitingReply = false;
 			break;
