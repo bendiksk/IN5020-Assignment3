@@ -151,15 +151,19 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		//	  - Cast the event object to a message:
 		GossipMessage message = (GossipMessage) event;
 		ArrayList<Entry> shuffleList = (ArrayList<Entry>) message.getShuffleList();
+		Node sender = message.getNode();
 		
 		switch (message.getType()) {
 		// If the message is a shuffle request:
 		case SHUFFLE_REQUEST:
-
 		//	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request; 
 		//	  2. Q selects a random subset of size l of its own neighbors;
-
+			ArrayList<Entry> subset = createRandomSubset(sender);
 		//	  3. Q reply P's shuffle request by sending back its own subset;
+			GossipMessage replyMessage = new GossipMessage(node, subset);
+			message.setType(MessageType.SHUFFLE_REPLY);
+			Transport tr = (Transport) node.getProtocol(tid);
+			tr.send(node, sender, replyMessage, pid);
 		//	  4. Q updates its cache to include the neighbors sent by P:
 		//		 - No neighbor appears twice in the cache
 		//		 - Use empty cache slots to add the new entries
@@ -179,7 +183,6 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// If the message is a shuffle rejection:
 		case SHUFFLE_REJECTED:
 		//	  1. If P was originally removed from Q's cache, add it again to the cache.
-			Node sender = message.getNode();
             if(!this.contains(sender)) {
             	if(cache.size() >= size) {
             		// TODO: Maybe fix in elegant way
