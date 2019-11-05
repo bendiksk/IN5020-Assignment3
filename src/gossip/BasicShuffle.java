@@ -91,12 +91,12 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		if(awaitingReply || cache.isEmpty()) return;
 		// 3. Select a random neighbor (named Q) from P's cache to initiate the shuffling;
 		//	  - You should use the simulator's common random source to produce a random number: CommonState.r.nextInt(cache.size())
-		int randomIndex = CommonState.r.nextInt(cache.size());
-		Entry Q = cache.get(randomIndex);
+		int qIndex = CommonState.r.nextInt(cache.size());
+		Entry Q = cache.get(qIndex);
 
 		// 4. If P's cache is full, remove Q from the cache;
 		if(cache.size() >= size) {
-			cache.remove(Q);
+			cache.remove(qIndex);
 		}
 		// 5. Select a subset of other l - 1 random neighbors from P's cache;
 		//	  - l is the length of the shuffle exchange
@@ -106,12 +106,13 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		ArrayList<Entry> subset = new ArrayList<>();
 
 		for (int i = 0; i < l - 1; i++) {
-			int randSeed = CommonState.r.nextInt(cache.size());
-			while(swapSetIndices.contains(randSeed) && !cache.get(randSeed).equals(Q.getNode())) {
-				randSeed = CommonState.r.nextInt(cache.size());
+			// Get a new random Node from the cache which is not already used, and not Q
+			int randomIndex = CommonState.r.nextInt(cache.size());
+			while(swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(Q.getNode())) {
+				randomIndex = CommonState.r.nextInt(cache.size());
 			};
-			swapSetIndices.add(randSeed);
-			Entry newEntry = new Entry(cache.get(randSeed).getNode());
+			swapSetIndices.add(randomIndex);
+			Entry newEntry = new Entry(cache.get(randomIndex).getNode());
 			newEntry.setSentTo(Q.getNode());
 			subset.add(newEntry);
 		}
