@@ -1,5 +1,6 @@
 package gossip;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -103,19 +104,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		//    - Do not add Q to this subset
 		// 6. Add P to the subset;
 		swapSetIndices.clear();
-		ArrayList<Entry> subset = new ArrayList<>();
-
-		for (int i = 0; i < l - 1; i++) {
-			// Get a new random Node from the cache which is not already used, and not Q
-			int randomIndex = CommonState.r.nextInt(cache.size());
-			while(swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(Q.getNode())) {
-				randomIndex = CommonState.r.nextInt(cache.size());
-			};
-			swapSetIndices.add(randomIndex);
-			Entry newEntry = new Entry(cache.get(randomIndex).getNode());
-			newEntry.setSentTo(Q.getNode());
-			subset.add(newEntry);
-		}
+		ArrayList<Entry> subset = createRandomSubset(Q);
 
 		// 7. Send a shuffle request to Q containing the subset;
 		//	  - Keep track of the nodes sent to Q
@@ -132,6 +121,22 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		
 	}
 
+	private ArrayList<Entry> createRandomSubset(Entry q) {
+		ArrayList<Entry> subset = new ArrayList<>();
+		for (int i = 0; i < l - 1; i++) {
+			// Get a new random Node from the cache which is not already used, and not Q
+			int randomIndex = CommonState.r.nextInt(cache.size());
+			while(swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(q.getNode())) {
+				randomIndex = CommonState.r.nextInt(cache.size());
+			};
+			swapSetIndices.add(randomIndex);
+			Entry newEntry = new Entry(cache.get(randomIndex).getNode());
+			newEntry.setSentTo(q.getNode());
+			subset.add(newEntry);
+		}
+		return subset;
+	}
+
 	/* The simulator engine calls the method processEvent at the specific time unit that an event occurs in the simulation.
 	 * It is not called periodically as the nextCycle method.
 	 * 
@@ -145,42 +150,29 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// Q receives a message from P;
 		//	  - Cast the event object to a message:
 		GossipMessage message = (GossipMessage) event;
+		ArrayList<Entry> shuffleList = (ArrayList<Entry>) message.getShuffleList();
 		
 		switch (message.getType()) {
 		// If the message is a shuffle request:
 		case SHUFFLE_REQUEST:
+
 		//	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request; 
-		//	  2. Q selects a random subset of size l of its own neighbors; 
+		//	  2. Q selects a random subset of size l of its own neighbors;
+
 		//	  3. Q reply P's shuffle request by sending back its own subset;
 		//	  4. Q updates its cache to include the neighbors sent by P:
 		//		 - No neighbor appears twice in the cache
 		//		 - Use empty cache slots to add the new entries
 		//		 - If the cache is full, you can replace entries among the ones sent to P with the new ones
+			addToCache(shuffleList);
 			break;
 		
 		// If the message is a shuffle reply:
 		case SHUFFLE_REPLY:
 		//	  1. In this case Q initiated a shuffle with P and is receiving a response containing a subset of P's neighbors
-			ArrayList<Entry> shuffleList = (ArrayList<Entry>) message.getShuffleList();
 		//	  2. Q updates its cache to include the neighbors sent by P:
-			for (Entry entry : shuffleList) {
-				if (this.contains(entry.getNode())) {
-				//		 - No neighbor appears twice in the cache
-					continue;
-				} else if(cache.size() < size) {
-				//		 - Use empty cache slots to add new entries
-					cache.add(new Entry(entry.getNode()));
-				} else {
-				//		 - If the cache is full, you can replace entries among the ones originally sent to P with the new ones
-					if (swapSetIndices.size() == 0) {
-						// TODO: Maybe put node in a random cache spot instead of throwing error
-						throw new IllegalStateException("Subset sent not same size as subset received");
-					}
-					Integer swapIndex = swapSetIndices.remove(0);
-					cache.set(swapIndex, new Entry(entry.getNode()));
-				}
-			}
-		//	  3. Q is no longer waiting for a shuffle reply;
+			addToCache(shuffleList);
+			//	  3. Q is no longer waiting for a shuffle reply;
 			awaitingReply = false;
 			break;
 		
@@ -204,8 +196,28 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		}
 		
 	}
-	
-/* The following methods are used only by the simulator and don't need to be changed */
+
+	private void addToCache(ArrayList<Entry> shuffleList) {
+		for (Entry entry : shuffleList) {
+			if (this.contains(entry.getNode())) {
+			//		 - No neighbor appears twice in the cache
+				continue;
+			} else if(cache.size() < size) {
+			//		 - Use empty cache slots to add new entries
+				cache.add(new Entry(entry.getNode()));
+			} else {
+			//		 - If the cache is full, you can replace entries among the ones originally sent to P with the new ones
+				if (swapSetIndices.size() == 0) {
+					// TODO: Maybe put node in a random cache spot instead of throwing error
+					throw new IllegalStateException("Subset sent not same size as subset received");
+				}
+				Integer swapIndex = swapSetIndices.remove(0);
+				cache.set(swapIndex, new Entry(entry.getNode()));
+			}
+		}
+	}
+
+	/* The following methods are used only by the simulator and don't need to be changed */
 	
 	@Override
 	public int degree() {
