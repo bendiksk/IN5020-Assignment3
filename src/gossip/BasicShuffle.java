@@ -104,7 +104,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		//    - Do not add Q to this subset
 		// 6. Add P to the subset;
 		swapSetIndices.clear();
-		ArrayList<Entry> subset = createRandomSubset(Q);
+		ArrayList<Entry> subset = createRandomSubset(Q.getNode());
 
 		// 7. Send a shuffle request to Q containing the subset;
 		//	  - Keep track of the nodes sent to Q
@@ -121,17 +121,17 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		
 	}
 
-	private ArrayList<Entry> createRandomSubset(Entry q) {
+	private ArrayList<Entry> createRandomSubset(Node nodeToAvoid) {
 		ArrayList<Entry> subset = new ArrayList<>();
 		for (int i = 0; i < l - 1; i++) {
 			// Get a new random Node from the cache which is not already used, and not Q
 			int randomIndex = CommonState.r.nextInt(cache.size());
-			while(swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(q.getNode())) {
+			while(swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
 				randomIndex = CommonState.r.nextInt(cache.size());
 			};
 			swapSetIndices.add(randomIndex);
 			Entry newEntry = new Entry(cache.get(randomIndex).getNode());
-			newEntry.setSentTo(q.getNode());
+			newEntry.setSentTo(nodeToAvoid);
 			subset.add(newEntry);
 		}
 		return subset;
