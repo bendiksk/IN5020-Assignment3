@@ -107,8 +107,8 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 
 		for (int i = 0; i < l - 1; i++) {
 			int randSeed = CommonState.r.nextInt(cache.size());
-			while(swapSetIndices.contains(randSeed)) {
-				randSeed = CommonState.r.nextInt(cache.size())
+			while(swapSetIndices.contains(randSeed) && !cache.get(randSeed).equals(Q.getNode())) {
+				randSeed = CommonState.r.nextInt(cache.size());
 			};
 			swapSetIndices.add(randSeed);
 			Entry newEntry = new Entry(cache.get(randSeed).getNode());
@@ -186,6 +186,9 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// If the message is a shuffle rejection:
 		case SHUFFLE_REJECTED:
 		//	  1. If P was originally removed from Q's cache, add it again to the cache.
+//            if(!cache.contains()) {
+//
+//            }
 		//	  2. Q is no longer waiting for a shuffle reply;
 			awaitingReply = false;
 			break;
