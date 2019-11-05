@@ -53,9 +53,11 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	// The maximum length of the shuffle exchange;
 	private final int l;
 
-	private boolean awaitingReply = false;
+	// To check intermediate waiting state between SHUFFLE_REQUEST and SHUFFLE_REPLY / SHUFFLE_REJECTED
+	private boolean awaitingReply;
 
-	ArrayList<Integer> swapSetIndices = new ArrayList<>();
+	// Remember last subset of nodes sent (indices to cache)
+	ArrayList<Integer> swapSetIndices;
 	
 	/**
 	 * Constructor that initializes the relevant simulation parameters and
@@ -65,6 +67,8 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 */
 	public BasicShuffle(String n)
 	{
+		this.awaitingReply = false;
+		this.swapSetIndices = new ArrayList<>();
 		this.size = Configuration.getInt(n + "." + PAR_CACHE);
 		this.l = Configuration.getInt(n + "." + PAR_L);
 		this.tid = Configuration.getPid(n + "." + PAR_TRANSPORT);
@@ -103,7 +107,6 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
 		// 6. Add P to the subset;
-		swapSetIndices.clear();
 		ArrayList<Entry> subset = createRandomSubset(Q.getNode());
 
 		// 7. Send a shuffle request to Q containing the subset;
@@ -122,6 +125,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	}
 
 	private ArrayList<Entry> createRandomSubset(Node nodeToAvoid) {
+		swapSetIndices.clear();
 		ArrayList<Entry> subset = new ArrayList<>();
 		for (int i = 0; i < l - 1; i++) {
 			// Get a new random Node from the cache which is not already used, and not Q
