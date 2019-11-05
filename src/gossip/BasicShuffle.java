@@ -1,6 +1,5 @@
 package gossip;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,7 +8,6 @@ import peersim.config.Configuration;
 import peersim.core.CommonState;
 import peersim.core.Linkable;
 import peersim.core.Node;
-import peersim.core.Protocol;
 import peersim.edsim.EDProtocol;
 import peersim.transport.Transport;
 
@@ -55,6 +53,8 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	private final int l;
 
 	private boolean awaitingReply = false;
+
+	ArrayList<Integer> swapSetIndices = new ArrayList<>();
 	
 	/**
 	 * Constructor that initializes the relevant simulation parameters and
@@ -102,13 +102,15 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
 		// 6. Add P to the subset;
-		ArrayList<Integer> usedNodes = new ArrayList<>();
+		swapSetIndices.clear();
 		ArrayList<Entry> subset = new ArrayList<>();
 
 		for (int i = 0; i < l - 1; i++) {
 			int randSeed = CommonState.r.nextInt(cache.size());
-			while(usedNodes.contains(randSeed)) randSeed = CommonState.r.nextInt(cache.size());
-
+			while(swapSetIndices.contains(randSeed)) {
+				randSeed = CommonState.r.nextInt(cache.size())
+			};
+			swapSetIndices.add(randSeed);
 			Entry newEntry = new Entry(cache.get(randSeed).getNode());
 			newEntry.setSentTo(Q.getNode());
 			subset.add(newEntry);
@@ -158,17 +160,34 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// If the message is a shuffle reply:
 		case SHUFFLE_REPLY:
 		//	  1. In this case Q initiated a shuffle with P and is receiving a response containing a subset of P's neighbors
+			ArrayList<Entry> shuffleList = (ArrayList<Entry>) message.getShuffleList();
 		//	  2. Q updates its cache to include the neighbors sent by P:
-		//		 - No neighbor appears twice in the cache
-		//		 - Use empty cache slots to add new entries
-		//		 - If the cache is full, you can replace entries among the ones originally sent to P with the new ones
-		//	  3. Q is no longer waiting for a shuffle reply;	 
+			for (Entry entry : shuffleList) {
+				if (this.contains(entry.getNode())) {
+				//		 - No neighbor appears twice in the cache
+					continue;
+				} else if(cache.size() < size) {
+				//		 - Use empty cache slots to add new entries
+					cache.add(new Entry(entry.getNode()));
+				} else {
+				//		 - If the cache is full, you can replace entries among the ones originally sent to P with the new ones
+					if (swapSetIndices.size() == 0) {
+						// TODO: Maybe put node in a random cache spot instead of throwing error
+						throw new IllegalStateException("Subset sent not same size as subset received");
+					}
+					Integer swapIndex = swapSetIndices.remove(0);
+					cache.set(swapIndex, new Entry(entry.getNode()));
+				}
+			}
+		//	  3. Q is no longer waiting for a shuffle reply;
+			awaitingReply = false;
 			break;
 		
 		// If the message is a shuffle rejection:
 		case SHUFFLE_REJECTED:
 		//	  1. If P was originally removed from Q's cache, add it again to the cache.
 		//	  2. Q is no longer waiting for a shuffle reply;
+			awaitingReply = false;
 			break;
 			
 		default:
