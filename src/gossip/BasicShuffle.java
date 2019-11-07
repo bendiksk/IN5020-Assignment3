@@ -97,7 +97,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// 3. Select a random neighbor (named Q) from P's cache to initiate the shuffling;
 		//	  - You should use the simulator's common random source to produce a random number: CommonState.r.nextInt(cache.size())
 		int qIndex = CommonState.r.nextInt(cache.size());
-		Entry Q = cache.get(qIndex);
+		Node Q = cache.get(qIndex).getNode();
 
 		// 4. If P's cache is full, remove Q from the cache;
 		if(cache.size() >= maxSize) {
@@ -106,17 +106,18 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// 5. Select a subset of other l - 1 random neighbors from P's cache;
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
-        ArrayList<Entry> subset = createRandomSubset(Q.getNode());
+        ArrayList<Entry> subset = createRandomSubset(Q);
         // 6. Add P to the subset;
 		subset.add(new Entry(node));
 		// 7. Send a shuffle request to Q containing the subset;
 		//	  - Keep track of the nodes sent to Q
 		//	  - Example code for sending a message:
-		 GossipMessage message = new GossipMessage(node, subset);
-		 message.setType(MessageType.SHUFFLE_REQUEST);
-		 Transport tr = (Transport) node.getProtocol(tid);
-		 tr.send(node, Q.getNode(), message, protocolID);
-		 awaitingReply = true;
+        GossipMessage message = new GossipMessage(node, subset);
+        message.setType(MessageType.SHUFFLE_REQUEST);
+        Transport tr = (Transport) node.getProtocol(tid);
+        awaitingReply = true;
+        System.out.printf("\nRequest-mess\n\ttype: %s",message);
+        tr.send(node, Q, message, protocolID);
 		//
 		// 8. From this point on P is waiting for Q's response and will not initiate a new shuffle operation;
 		//
@@ -139,7 +140,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 				int randomIndex = CommonState.r.nextInt(cache.size());
 				while (swapSetIndices.contains(randomIndex) || cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
 					randomIndex = CommonState.r.nextInt(cache.size());
-					System.out.println("adding node: " + cache.get(randomIndex).getNode());
+//					System.out.println("adding node: " + cache.get(randomIndex).getNode());
 				}
 				swapSetIndices.add(randomIndex);
 				Entry newEntry = new Entry(cache.get(randomIndex).getNode());
@@ -159,7 +160,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 */
 	@Override
 	public void processEvent(Node node, int pid, Object event) {
-		System.out.printf("\nProcess event called\nsize: %s\ntype: %s", cache.size(), event.getClass());
+		System.out.printf("\nProcess event called\n\tsize: %s\n\ttype: %s", cache.size(), event.getClass());
 
 		// Let's name this node as Q;
 		// Q receives a message from P;
@@ -179,6 +180,8 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 			GossipMessage replyMessage = new GossipMessage(node, subset);
 			message.setType(MessageType.SHUFFLE_REPLY);
 			Transport tr = (Transport) node.getProtocol(tid);
+
+            System.out.printf("\nReply-message\n\ttype: %s\n\tsubset-size: %s\n\tsender-size: %s",replyMessage, subset.size(), cache.size());
 			tr.send(node, sender, replyMessage, pid);
 		//	  4. Q updates its cache to include the neighbors sent by P:
 		//		 - No neighbor appears twice in the cache
