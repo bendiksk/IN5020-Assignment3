@@ -103,12 +103,14 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		if(cache.size() >= maxSize) {
 			cache.remove(qIndex);
 		}
+
 		// 5. Select a subset of other l - 1 random neighbors from P's cache;
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
         ArrayList<Entry> subset = createRandomSubset(Q, l-1);
         // 6. Add P to the subset;
 		subset.add(new Entry(node));
+
 		// 7. Send a shuffle request to Q containing the subset;
 		//	  - Keep track of the nodes sent to Q
 		//	  - Example code for sending a message:
@@ -127,7 +129,9 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	private ArrayList<Entry> createRandomSubset(Node nodeToAvoid, int subsetSize) {
 		swapSetIndices.clear();
 		ArrayList<Entry> subset = new ArrayList<>();
-		if(cache.size() < subsetSize) {
+		if(cache.size() == 1){
+			return subset;
+		} else if (cache.size() < subsetSize) {
 			for (int i = 0; i < cache.size(); i++) {
 				if (cache.get(i).getNode().getID() == nodeToAvoid.getID()) continue;
 				swapSetIndices.add(i);
@@ -141,7 +145,6 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 				int randomIndex = CommonState.r.nextInt(cache.size());
 				while (swapSetIndices.contains(randomIndex) || cache.get(randomIndex).getNode().getID() == nodeToAvoid.getID()) {
 					randomIndex = CommonState.r.nextInt(cache.size());
-//					System.out.println("adding node: " + cache.get(randomIndex).getNode());
 				}
 				swapSetIndices.add(randomIndex);
 				Entry newEntry = new Entry(cache.get(randomIndex).getNode());
@@ -173,6 +176,13 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// If the message is a shuffle request:
 		case SHUFFLE_REQUEST:
 		//	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request;
+			if(awaitingReply){
+				GossipMessage replyMessage = new GossipMessage(node, null);
+				message.setType(MessageType.SHUFFLE_REJECTED);
+				Transport tr = (Transport) node.getProtocol(tid);
+				tr.send(node, sender, replyMessage, pid);
+			}
+
 		//	  2. Q selects a random subset of size l of its own neighbors;
 			ArrayList<Entry> subset = createRandomSubset(sender, l);
 
