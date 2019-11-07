@@ -14,17 +14,17 @@ import peersim.transport.Transport;
 
 /**
  * @author Lucas Provensi
- * 
+ *
  * Basic Shuffling protocol template
- * 
- * The basic shuffling algorithm, introduced by Stavrou et al in the paper: 
- * "A Lightweight, Robust P2P System to Handle Flash Crowds", is a simple 
- * peer-to-peer communication model. It forms an overlay and keeps it 
- * connected by means of an epidemic algorithm. The protocol is extremely 
- * simple: each peer knows a small, continuously changing set of other peers, 
- * called its neighbors, and occasionally contacts a random one to exchange 
+ *
+ * The basic shuffling algorithm, introduced by Stavrou et al in the paper:
+ * "A Lightweight, Robust P2P System to Handle Flash Crowds", is a simple
+ * peer-to-peer communication model. It forms an overlay and keeps it
+ * connected by means of an epidemic algorithm. The protocol is extremely
+ * simple: each peer knows a small, continuously changing set of other peers,
+ * called its neighbors, and occasionally contacts a random one to exchange
  * some of their neighbors.
- * 
+ *
  * This class is a template with instructions of how to implement the shuffling
  * algorithm in PeerSim.
  * Should make use of the classes Entry and GossipMessage:
@@ -36,7 +36,7 @@ import peersim.transport.Transport;
  *
  */
 public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
-	
+
 	private static final String PAR_CACHE = "cacheSize";
 	private static final String PAR_L = "shuffleLength";
 	private static final String PAR_TRANSPORT = "transport";
@@ -45,10 +45,10 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 
 	// The list of neighbors known by this node, or the cache.
 	private List<Entry> cache;
-	
+
 	// The maximum size of the cache;
 	private final int maxSize;
-	
+
 	// The maximum length of the shuffle exchange;
 	private final int l;
 
@@ -61,7 +61,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	/**
 	 * Constructor that initializes the relevant simulation parameters and
 	 * other class variables.
-	 * 
+	 *
 	 * @param n simulation parameters
 	 */
 	public BasicShuffle(String n)
@@ -76,26 +76,29 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	}
 
 	/* START YOUR IMPLEMENTATION FROM HERE
-	 * 
-	 * The simulator engine calls the method nextCycle once every cycle 
+	 *
+	 * The simulator engine calls the method nextCycle once every cycle
 	 * (specified in time units in the simulation script) for all the nodes.
-	 * 
+	 *
 	 * You can assume that a node initiates a shuffling operation every cycle.
-	 * 
+	 *
 	 * @see peersim.cdsim.CDProtocol#nextCycle(peersim.core.Node, int)
 	 */
 	@Override
 	public void nextCycle(Node node, int protocolID) {
-//		System.out.println("Next Cycle called");
+
 		// Implement the shuffling protocol using the following steps (or
 		// you can design a similar algorithm):
 		// Let's name this node as P
-		
 		// 1. If P is waiting for a response from a shuffling operation initiated in a previous cycle, return;
 		// 2. If P's cache is empty, return;
-		if(awaitingReply || cache.isEmpty()) return;
+		if(awaitingReply || cache.isEmpty()){
+			return;
+		}
+
 		// 3. Select a random neighbor (named Q) from P's cache to initiate the shuffling;
 		//	  - You should use the simulator's common random source to produce a random number: CommonState.r.nextInt(cache.size())
+		// Initially everyone sends to Node 0
 		int qIndex = CommonState.r.nextInt(cache.size());
 		Entry Q = cache.get(qIndex);
 
@@ -103,30 +106,35 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		if(cache.size() >= maxSize) {
 			cache.remove(qIndex);
 		}
+
 		// 5. Select a subset of other l - 1 random neighbors from P's cache;
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
         ArrayList<Entry> subset = createRandomSubset(Q.getNode());
+
         // 6. Add P to the subset;
 		subset.add(new Entry(node));
+
 		// 7. Send a shuffle request to Q containing the subset;
 		//	  - Keep track of the nodes sent to Q
 		//	  - Example code for sending a message:
-		 GossipMessage message = new GossipMessage(node, subset);
-		 message.setType(MessageType.SHUFFLE_REQUEST);
-		 Transport tr = (Transport) node.getProtocol(tid);
-		 tr.send(node, Q.getNode(), message, protocolID);
-		 awaitingReply = true;
-		//
+		GossipMessage message = new GossipMessage(node, subset);
+		message.setType(MessageType.SHUFFLE_REQUEST);
+		Transport tr = (Transport) node.getProtocol(tid);
+
 		// 8. From this point on P is waiting for Q's response and will not initiate a new shuffle operation;
-		//
-		// The response from Q will be handled by the method processEvent.
+		awaitingReply = true;
+
+		tr.send(node, Q.getNode(), message, protocolID);
+
 	}
 
 	private ArrayList<Entry> createRandomSubset(Node nodeToAvoid) {
 		swapSetIndices.clear();
 		ArrayList<Entry> subset = new ArrayList<>();
-		if(cache.size() < l - 1) {
+		if(cache.size() == 1){
+			return subset;
+		} else if (cache.size() < l - 1) {
 			for (int i = 0; i < cache.size(); i++) {
 				swapSetIndices.add(i);
 				Entry newEntry = new Entry(cache.get(i).getNode());
@@ -137,7 +145,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 			for (int i = 0; i < l - 1; i++) {
 				// Get a new random Node from the cache which is not already used, and not Q
 				int randomIndex = CommonState.r.nextInt(cache.size());
-				while (swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
+				while (swapSetIndices.contains(randomIndex) || cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
 					randomIndex = CommonState.r.nextInt(cache.size());
 				}
 				swapSetIndices.add(randomIndex);
@@ -151,26 +159,39 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 
 	/* The simulator engine calls the method processEvent at the specific time unit that an event occurs in the simulation.
 	 * It is not called periodically as the nextCycle method.
-	 * 
+	 *
 	 * You should implement the handling of the messages received by this node in this method.
-	 * 
+	 *
 	 * @see peersim.edsim.EDProtocol#processEvent(peersim.core.Node, int, java.lang.Object)
 	 */
 	@Override
 	public void processEvent(Node node, int pid, Object event) {
-		System.out.printf("\nProcess event called\nsize: %s\ntype: %s", cache.size(), event.getClass());
+		//System.out.printf("\nProcess event called\nsize: %s\ntype: %s", cache.size(), event.getClass());
 
 		// Let's name this node as Q;
 		// Q receives a message from P;
-		//	  - Cast the event object to a message:
+		// - Cast the event object to a message:
 		GossipMessage message = (GossipMessage) event;
 		ArrayList<Entry> shuffleList = (ArrayList<Entry>) message.getShuffleList();
 		Node sender = message.getNode();
-		
+
+		System.out.println("Receiver: " + node.getID());
+		System.out.println("Receiver subset size:" + message.getShuffleList().size());
+		for(Entry e : shuffleList){
+			System.out.println("Node in shuffleList: " + e.getNode().getID());
+		}
+
 		switch (message.getType()) {
 		// If the message is a shuffle request:
 		case SHUFFLE_REQUEST:
 		//	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request;
+			if(awaitingReply){
+				GossipMessage replyMessage = new GossipMessage(node, null);
+				message.setType(MessageType.SHUFFLE_REJECTED);
+				Transport tr = (Transport) node.getProtocol(tid);
+				tr.send(node, sender, replyMessage, pid);
+			}
+
 		//	  2. Q selects a random subset of size l of its own neighbors;
 			ArrayList<Entry> subset = createRandomSubset(sender);
 
@@ -185,7 +206,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		//		 - If the cache is full, you can replace entries among the ones sent to P with the new ones
 			addToCache(shuffleList);
 			break;
-		
+
 		// If the message is a shuffle reply:
 		case SHUFFLE_REPLY:
 		//	  1. In this case Q initiated a shuffle with P and is receiving a response containing a subset of P's neighbors
@@ -194,7 +215,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 			//	  3. Q is no longer waiting for a shuffle reply;
 			awaitingReply = false;
 			break;
-		
+
 		// If the message is a shuffle rejection:
 		case SHUFFLE_REJECTED:
 		//	  1. If P was originally removed from Q's cache, add it again to the cache.
@@ -208,11 +229,11 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		//	  2. Q is no longer waiting for a shuffle reply;
 			awaitingReply = false;
 			break;
-			
+
 		default:
 			break;
 		}
-		
+
 	}
 
 	private void addToCache(ArrayList<Entry> shuffleList) {
@@ -236,7 +257,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	}
 
 	/* The following methods are used only by the simulator and don't need to be changed */
-	
+
 	@Override
 	public int degree() {
 		return cache.size();
@@ -269,11 +290,11 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	public Object clone()
 	{
 		BasicShuffle gossip = null;
-		try { 
-			gossip = (BasicShuffle) super.clone(); 
+		try {
+			gossip = (BasicShuffle) super.clone();
 		} catch( CloneNotSupportedException e ) {
-			
-		} 
+
+		}
 		gossip.cache = new ArrayList<Entry>();
 
 		return gossip;
@@ -281,11 +302,11 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 
 	@Override
 	public void onKill() {
-		// TODO Auto-generated method stub		
+		// TODO Auto-generated method stub
 	}
 
 	@Override
 	public void pack() {
-		// TODO Auto-generated method stub	
+		// TODO Auto-generated method stub
 	}
 }
