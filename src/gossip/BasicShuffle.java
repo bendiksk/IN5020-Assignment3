@@ -106,7 +106,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// 5. Select a subset of other l - 1 random neighbors from P's cache;
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
-        ArrayList<Entry> subset = createRandomSubset(Q);
+        ArrayList<Entry> subset = createRandomSubset(Q, l-1);
         // 6. Add P to the subset;
 		subset.add(new Entry(node));
 		// 7. Send a shuffle request to Q containing the subset;
@@ -124,10 +124,10 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// The response from Q will be handled by the method processEvent.
 	}
 
-	private ArrayList<Entry> createRandomSubset(Node nodeToAvoid) {
+	private ArrayList<Entry> createRandomSubset(Node nodeToAvoid, int subsetSize) {
 		swapSetIndices.clear();
 		ArrayList<Entry> subset = new ArrayList<>();
-		if(cache.size() < l - 1) {
+		if(cache.size() < subsetSize) {
 			for (int i = 0; i < cache.size(); i++) {
 				swapSetIndices.add(i);
 				Entry newEntry = new Entry(cache.get(i).getNode());
@@ -174,7 +174,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		case SHUFFLE_REQUEST:
 		//	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request;
 		//	  2. Q selects a random subset of size l of its own neighbors;
-			ArrayList<Entry> subset = createRandomSubset(sender);
+			ArrayList<Entry> subset = createRandomSubset(sender, l);
 
 		//	  3. Q reply P's shuffle request by sending back its own subset;
 			GossipMessage replyMessage = new GossipMessage(node, subset);
