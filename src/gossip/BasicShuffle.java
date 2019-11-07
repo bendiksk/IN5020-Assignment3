@@ -85,8 +85,9 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 * @see peersim.cdsim.CDProtocol#nextCycle(peersim.core.Node, int)
 	 */
 	@Override
-	public void nextCycle(Node node, int protocolID) {
-		System.out.println("Next Cycle called");
+	public void nextCycle(Node thisNode, int protocolID) {
+		System.out.println("NextCycle called");
+        System.out.printf("\tID: %s, Nbs: %s\n", thisNode.getID(), degree());
 		// Implement the shuffling protocol using the following steps (or
 		// you can design a similar algorithm):
 		// Let's name this node as P
@@ -97,7 +98,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// 3. Select a random neighbor (named Q) from P's cache to initiate the shuffling;
 		//	  - You should use the simulator's common random source to produce a random number: CommonState.r.nextInt(cache.size())
 		int qIndex = CommonState.r.nextInt(cache.size());
-		Node Q = cache.get(qIndex).getNode();
+		Node thatNode = cache.get(qIndex).getNode();
 
 		// 4. If P's cache is full, remove Q from the cache;
 		if(cache.size() >= maxSize) {
@@ -107,19 +108,19 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// 5. Select a subset of other l - 1 random neighbors from P's cache;
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
-        ArrayList<Entry> subset = createRandomSubset(Q, l-1);
+        ArrayList<Entry> subset = createRandomSubset(thatNode, l-1);
         // 6. Add P to the subset;
-		subset.add(new Entry(node));
+		subset.add(new Entry(thisNode));
 
 		// 7. Send a shuffle request to Q containing the subset;
 		//	  - Keep track of the nodes sent to Q
 		//	  - Example code for sending a message:
-        GossipMessage message = new GossipMessage(node, subset);
+        GossipMessage message = new GossipMessage(thisNode, subset);
         message.setType(MessageType.SHUFFLE_REQUEST);
-        Transport tr = (Transport) node.getProtocol(tid);
+        Transport tr = (Transport) thisNode.getProtocol(tid);
         awaitingReply = true;
-        System.out.printf("Request-mess\n\ttype: %s\n\t size: %s\n\t subset-size: %s\n\n",message, cache.size(), subset.size());
-        tr.send(node, Q, message, protocolID);
+//        System.out.printf("Request-mess\n\ttype: %s\n\t size: %s\n\t subset-size: %s\n\n",message, cache.size(), subset.size());
+        tr.send(thisNode, thatNode, message, protocolID);
 		//
 		// 8. From this point on P is waiting for Q's response and will not initiate a new shuffle operation;
 		//
@@ -129,9 +130,8 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	private ArrayList<Entry> createRandomSubset(Node nodeToAvoid, int subsetSize) {
 		swapSetIndices.clear();
 		ArrayList<Entry> subset = new ArrayList<>();
-		if(cache.size() == 1){
-			return subset;
-		} else if (cache.size() < subsetSize) {
+		if (cache.size() < subsetSize) {
+            // Add whole cache to subset
 			for (int i = 0; i < cache.size(); i++) {
 				if (cache.get(i).getNode().getID() == nodeToAvoid.getID()) continue;
 				swapSetIndices.add(i);
@@ -140,16 +140,19 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 				subset.add(newEntry);
 			}
 		} else {
+		    // Fill subset with random nodes from cache which is not Q
 			for (int i = 0; i < subsetSize; i++) {
 				// Get a new random Node from the cache which is not already used, and not Q
 				int randomIndex = CommonState.r.nextInt(cache.size());
 				while (swapSetIndices.contains(randomIndex) || cache.get(randomIndex).getNode().getID() == nodeToAvoid.getID()) {
+                    System.out.println("\tGen new idx");
 					randomIndex = CommonState.r.nextInt(cache.size());
 				}
+				// Add node to subset and remember index
 				swapSetIndices.add(randomIndex);
 				Entry newEntry = new Entry(cache.get(randomIndex).getNode());
 				// TODO: Is this needed?
-//				newEntry.setSentTo(nodeToAvoid);
+				newEntry.setSentTo(nodeToAvoid);
 				subset.add(newEntry);
 			}
 		}
@@ -164,70 +167,76 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 * @see peersim.edsim.EDProtocol#processEvent(peersim.core.Node, int, java.lang.Object)
 	 */
 	@Override
-	public void processEvent(Node node, int pid, Object event) {
-		// Let's name this node as Q;
-		// Q receives a message from P;
-		//	  - Cast the event object to a message:
-		GossipMessage message = (GossipMessage) event;
-		ArrayList<Entry> shuffleList = (ArrayList<Entry>) message.getShuffleList();
-		Node sender = message.getNode();
+    public void processEvent(Node thisNode, int pid, Object event) {
+        System.out.println("processEvent called");
+        // Let's name this node as Q;
+        // Q receives a message from P;
+        //	  - Cast the event object to a message:
+        GossipMessage message = (GossipMessage) event;
+        System.out.printf("\ttype: %s\n\tID: %s, Nbs: %s\n", message.getType(), thisNode.getID(), degree());
+//        System.out.println("\tNbs:");
+//        for (Entry e : cache) {
+//            System.out.println("\t\t"+e.getNode().getID());
+//        }
+        ArrayList<Entry> shuffleList = (ArrayList<Entry>) message.getShuffleList();
+        Node thatNode = message.getNode();
+        GossipMessage replyMessage;
+        Transport tr = (Transport) thisNode.getProtocol(tid);
 //		System.out.printf("\nProcess event called\n\tcache-size: %s\n\ttype: %s\n\treceived-subset: %s\n", cache.size(), event.getClass(), shuffleList.size());
-		switch (message.getType()) {
-		// If the message is a shuffle request:
-		case SHUFFLE_REQUEST:
-		//	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request;
-			if(awaitingReply){
-				GossipMessage replyMessage = new GossipMessage(node, null);
-				message.setType(MessageType.SHUFFLE_REJECTED);
-				Transport tr = (Transport) node.getProtocol(tid);
-				tr.send(node, sender, replyMessage, pid);
-			}
+        switch (message.getType()) {
+            // If the message is a shuffle request:
+            case SHUFFLE_REQUEST:
+                //	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request;
+                if (awaitingReply) {
+                    replyMessage = new GossipMessage(thisNode, null);
+                    replyMessage.setType(MessageType.SHUFFLE_REJECTED);
+                    tr.send(thisNode, thatNode, replyMessage, pid);
+                    break;
+                }
 
-		//	  2. Q selects a random subset of size l of its own neighbors;
-			ArrayList<Entry> subset = createRandomSubset(sender, l);
+                //	  2. Q selects a random subset of size l of its own neighbors;
+                ArrayList<Entry> subset = createRandomSubset(thatNode, l);
 
-		//	  3. Q reply P's shuffle request by sending back its own subset;
-			GossipMessage replyMessage = new GossipMessage(node, subset);
-			message.setType(MessageType.SHUFFLE_REPLY);
-			Transport tr = (Transport) node.getProtocol(tid);
+                //	  3. Q reply P's shuffle request by sending back its own subset;
+                replyMessage = new GossipMessage(thisNode, subset);
+                replyMessage.setType(MessageType.SHUFFLE_REPLY);
 
 //            System.out.printf("\n\tReply-message\n\t\tsubset-size: %s", subset.size());
-			tr.send(node, sender, replyMessage, pid);
-		//	  4. Q updates its cache to include the neighbors sent by P:
-		//		 - No neighbor appears twice in the cache
-		//		 - Use empty cache slots to add the new entries
-		//		 - If the cache is full, you can replace entries among the ones sent to P with the new ones
-			addToCache(shuffleList);
-			break;
-		
-		// If the message is a shuffle reply:
-		case SHUFFLE_REPLY:
-		//	  1. In this case Q initiated a shuffle with P and is receiving a response containing a subset of P's neighbors
-		//	  2. Q updates its cache to include the neighbors sent by P:
-			addToCache(shuffleList);
-			//	  3. Q is no longer waiting for a shuffle reply;
-			awaitingReply = false;
-			break;
-		
-		// If the message is a shuffle rejection:
-		case SHUFFLE_REJECTED:
-		//	  1. If P was originally removed from Q's cache, add it again to the cache.
-            if(!this.contains(sender)) {
-            	if(cache.size() >= maxSize) {
-            		// TODO: Maybe fix in elegant way
-            		throw new IllegalStateException("Cache does not have space for rejected node");
-				}
-				cache.add(new Entry(sender));
-            }
-		//	  2. Q is no longer waiting for a shuffle reply;
-			awaitingReply = false;
-			break;
-			
-		default:
-			break;
-		}
-		
-	}
+                tr.send(thisNode, thatNode, replyMessage, pid);
+                //	  4. Q updates its cache to include the neighbors sent by P:
+                //		 - No neighbor appears twice in the cache
+                //		 - Use empty cache slots to add the new entries
+                //		 - If the cache is full, you can replace entries among the ones sent to P with the new ones
+                addToCache(shuffleList);
+                break;
+
+            // If the message is a shuffle reply:
+            case SHUFFLE_REPLY:
+                //	  1. In this case Q initiated a shuffle with P and is receiving a response containing a subset of P's neighbors
+                //	  2. Q updates its cache to include the neighbors sent by P:
+                addToCache(shuffleList);
+                //	  3. Q is no longer waiting for a shuffle reply;
+                awaitingReply = false;
+                break;
+
+            // If the message is a shuffle rejection:
+            case SHUFFLE_REJECTED:
+                //	  1. If P was originally removed from Q's cache, add it again to the cache.
+                if (!this.contains(thatNode)) {
+                    if (cache.size() >= maxSize) {
+                        // TODO: Maybe fix in elegant way
+                        throw new IllegalStateException("Cache does not have space for rejected node");
+                    }
+                    cache.add(new Entry(thatNode));
+                }
+                //	  2. Q is no longer waiting for a shuffle reply;
+                awaitingReply = false;
+                break;
+
+            default:
+                break;
+        }
+    }
 
 	private void addToCache(ArrayList<Entry> shuffleList) {
 		for (Entry entry : shuffleList) {
