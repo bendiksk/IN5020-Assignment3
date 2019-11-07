@@ -86,7 +86,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 */
 	@Override
 	public void nextCycle(Node node, int protocolID) {
-//		System.out.println("Next Cycle called");
+		System.out.println("Next Cycle called");
 		// Implement the shuffling protocol using the following steps (or
 		// you can design a similar algorithm):
 		// Let's name this node as P
@@ -137,8 +137,9 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 			for (int i = 0; i < l - 1; i++) {
 				// Get a new random Node from the cache which is not already used, and not Q
 				int randomIndex = CommonState.r.nextInt(cache.size());
-				while (swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
+				while (swapSetIndices.contains(randomIndex) || cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
 					randomIndex = CommonState.r.nextInt(cache.size());
+					System.out.println("adding node: " + cache.get(randomIndex).getNode());
 				}
 				swapSetIndices.add(randomIndex);
 				Entry newEntry = new Entry(cache.get(randomIndex).getNode());
