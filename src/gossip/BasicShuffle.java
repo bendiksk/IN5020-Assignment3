@@ -55,9 +55,9 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	// To check intermediate waiting state between SHUFFLE_REQUEST and SHUFFLE_REPLY / SHUFFLE_REJECTED
 	private boolean awaitingReply;
 
-	// Remember last subset of nodes sent (indices to cache)
+	// Remember last subset of nodes created using createRandomSubset() (indices to cache)
 	ArrayList<Integer> swapSetIndices;
-	
+
 	/**
 	 * Constructor that initializes the relevant simulation parameters and
 	 * other class variables.
@@ -86,6 +86,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 */
 	@Override
 	public void nextCycle(Node node, int protocolID) {
+		System.out.println("Next Cycle called");
 		// Implement the shuffling protocol using the following steps (or
 		// you can design a similar algorithm):
 		// Let's name this node as P
@@ -106,9 +107,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
 		// 6. Add P to the subset;
-		System.out.println("1");
 		ArrayList<Entry> subset = createRandomSubset(Q.getNode());
-		System.out.println("2");
 		// 7. Send a shuffle request to Q containing the subset;
 		//	  - Keep track of the nodes sent to Q
 		//	  - Example code for sending a message:
@@ -126,17 +125,27 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	private ArrayList<Entry> createRandomSubset(Node nodeToAvoid) {
 		swapSetIndices.clear();
 		ArrayList<Entry> subset = new ArrayList<>();
-		for (int i = 0; i < l - 1; i++) {
-			// Get a new random Node from the cache which is not already used, and not Q
-			int randomIndex = CommonState.r.nextInt(cache.size());
-			while(swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
-				randomIndex = CommonState.r.nextInt(cache.size());
-				System.out.println("RI: " + randomIndex);
-			};
-			swapSetIndices.add(randomIndex);
-			Entry newEntry = new Entry(cache.get(randomIndex).getNode());
-			newEntry.setSentTo(nodeToAvoid);
-			subset.add(newEntry);
+		if(cache.size() < l - 1) {
+			for (int i = 0; i < cache.size(); i++) {
+				swapSetIndices.add(i);
+				Entry newEntry = new Entry(cache.get(i).getNode());
+				newEntry.setSentTo(nodeToAvoid);
+				subset.add(newEntry);
+			}
+		} else {
+			for (int i = 0; i < l - 1; i++) {
+				// Get a new random Node from the cache which is not already used, and not Q
+				int randomIndex = CommonState.r.nextInt(cache.size());
+				while (swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
+					randomIndex = CommonState.r.nextInt(cache.size());
+					System.out.println("Generated index: " + randomIndex);
+					System.out.println("Node ID " + cache.get(randomIndex).getNode().getID());
+				}
+				swapSetIndices.add(randomIndex);
+				Entry newEntry = new Entry(cache.get(randomIndex).getNode());
+				newEntry.setSentTo(nodeToAvoid);
+				subset.add(newEntry);
+			}
 		}
 		return subset;
 	}
@@ -150,19 +159,23 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 */
 	@Override
 	public void processEvent(Node node, int pid, Object event) {
+		System.out.printf("\nProcess event called\nsize: %s\ntype: %s", cache.size(), event.getClass());
+
 		// Let's name this node as Q;
 		// Q receives a message from P;
 		//	  - Cast the event object to a message:
 		GossipMessage message = (GossipMessage) event;
+		System.out.println("message: "+ message.getType());
 		ArrayList<Entry> shuffleList = (ArrayList<Entry>) message.getShuffleList();
 		Node sender = message.getNode();
 		
 		switch (message.getType()) {
 		// If the message is a shuffle request:
 		case SHUFFLE_REQUEST:
-		//	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request; 
+		//	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request;
 		//	  2. Q selects a random subset of size l of its own neighbors;
 			ArrayList<Entry> subset = createRandomSubset(sender);
+
 		//	  3. Q reply P's shuffle request by sending back its own subset;
 			GossipMessage replyMessage = new GossipMessage(node, subset);
 			message.setType(MessageType.SHUFFLE_REPLY);
