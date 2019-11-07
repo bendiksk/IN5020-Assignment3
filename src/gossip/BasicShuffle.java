@@ -86,7 +86,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 */
 	@Override
 	public void nextCycle(Node node, int protocolID) {
-		System.out.println("Next Cycle called");
+//		System.out.println("Next Cycle called");
 		// Implement the shuffling protocol using the following steps (or
 		// you can design a similar algorithm):
 		// Let's name this node as P
@@ -106,8 +106,9 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// 5. Select a subset of other l - 1 random neighbors from P's cache;
 		//	  - l is the length of the shuffle exchange
 		//    - Do not add Q to this subset
-		// 6. Add P to the subset;
-		ArrayList<Entry> subset = createRandomSubset(Q.getNode());
+        ArrayList<Entry> subset = createRandomSubset(Q.getNode());
+        // 6. Add P to the subset;
+		subset.add(new Entry(node));
 		// 7. Send a shuffle request to Q containing the subset;
 		//	  - Keep track of the nodes sent to Q
 		//	  - Example code for sending a message:
@@ -138,8 +139,6 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 				int randomIndex = CommonState.r.nextInt(cache.size());
 				while (swapSetIndices.contains(randomIndex) || !cache.get(randomIndex).getNode().equals(nodeToAvoid)) {
 					randomIndex = CommonState.r.nextInt(cache.size());
-					System.out.println("Generated index: " + randomIndex);
-					System.out.println("Node ID " + cache.get(randomIndex).getNode().getID());
 				}
 				swapSetIndices.add(randomIndex);
 				Entry newEntry = new Entry(cache.get(randomIndex).getNode());
@@ -165,7 +164,6 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 		// Q receives a message from P;
 		//	  - Cast the event object to a message:
 		GossipMessage message = (GossipMessage) event;
-		System.out.println("message: "+ message.getType());
 		ArrayList<Entry> shuffleList = (ArrayList<Entry>) message.getShuffleList();
 		Node sender = message.getNode();
 		
