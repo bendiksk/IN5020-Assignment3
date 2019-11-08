@@ -15,12 +15,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
-		
+
 package peersim.reports;
 
 import peersim.config.Configuration;
 import peersim.graph.GraphAlgorithms;
 import peersim.util.IncrementalStats;
+import reports.ReportWriter;
 
 /**
 * Prints reports on the graph like average clustering and average path length,
@@ -37,7 +38,7 @@ public class GraphStats extends GraphObserver {
 // ===================== fields =======================================
 // ====================================================================
 
-/** 
+/**
 * The number of nodes to use for
 * sampling average path length.
 * Statistics are printed over a set of node pairs.
@@ -51,7 +52,7 @@ public class GraphStats extends GraphObserver {
 */
 private static final String PAR_NL = "nl";
 
-/** 
+/**
 * The number of nodes to use to sample
 * average clustering.
 * If zero is given, then no statistics
@@ -102,12 +103,11 @@ public GraphStats(String name) {
 * @see Clustering
 */
 public boolean execute() {
-	
-	System.out.print(name+": ");
-	
+//		System.out.print(name+": ");
+
 	IncrementalStats stats = new IncrementalStats();
 	updateGraph();
-	
+
 	if( nc != 0 )
 	{
 		stats.reset();
@@ -117,8 +117,9 @@ public boolean execute() {
 			stats.add(GraphAlgorithms.clustering(g,i));
 		}
 		System.out.print(stats.getAverage()+" ");
+		ReportWriter.writeClusterCoefficient(stats.getAverage());
 	}
-	
+
 	if( nl != 0 )
 	{
 		stats.reset();
@@ -136,13 +137,17 @@ public boolean execute() {
 					break outerloop;
 				}
 				else
-					stats.add(ga.d[j]); 
+					stats.add(ga.d[j]);
 			}
 		}
 		System.out.print(stats.getAverage());
+		ReportWriter.writeShortestPath(stats.getAverage());
 	}
-	
 	System.out.println();
+
+//	ReportWriter.closeClusterCoefficientWriter();
+//	ReportWriter.closeShortestPathWriter();
+
 	return false;
 }
 

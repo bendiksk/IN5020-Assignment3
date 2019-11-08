@@ -14,7 +14,7 @@ import peersim.core.Node;
 
 /**
  * @author Lucas Provensi
- * 
+ *
  * Report the in-degree distribution of the network.
  * Uses the list of neighbors obtained from a linkable protocol.
  *
@@ -51,7 +51,7 @@ public class InDegreeObserver implements Control
 			if (n.isUp()){
 				// Get the linkable protocol for all the running nodes
 				Linkable linkable = (Linkable)n.getProtocol(pid);
-				// Go through the neighbor list and update the degrees in the map 
+				// Go through the neighbor list and update the degrees in the map
 				for (int j = 0; j < linkable.degree(); j++){
 					Long nodeId = linkable.getNeighbor(j).getID();
 					Integer count = degreeCount.get(nodeId);
@@ -76,18 +76,23 @@ public class InDegreeObserver implements Control
 				value = dist.get(degree) + 1;
 			dist.put(degree, value);
 		}
-		
+
 		// Sort the distribution and print the result
-		// System.out.println(dist);
+		System.out.println(dist);
 		dist.remove(null);
-		
+
 		SortedSet<Integer> sortedKeys = new TreeSet<Integer>(dist.keySet());
 		for(int i = 0; i <= sortedKeys.last(); i++){
-			if(sortedKeys.contains(i))
-				System.out.println(i + " " + dist.get(i));
-			else
-				System.out.println(i + " " + 0);
+			if(sortedKeys.contains(i)) {
+//					System.out.println(i + " " + dist.get(i));
+				ReportWriter.writeInDegree(i + " " + dist.get(i) + "\n");
+			}
+			else {
+//					System.out.println(i + " " + 0);
+				ReportWriter.writeInDegree(i + " " + 0 + "\n");
+			}
 		}
+//		ReportWriter.closeInDegreeWriter();
 
 		return false;
 	}
