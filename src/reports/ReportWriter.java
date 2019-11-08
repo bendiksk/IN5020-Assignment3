@@ -14,20 +14,6 @@ public class ReportWriter {
     private static int shortestPathCounter = 0;
 
 
-    static BufferedWriter writerInDeg;
-    static BufferedWriter writerClusterCoeff;
-    static BufferedWriter writerShortestPath;
-
-//    static {
-//        try {
-//            writerInDeg = new BufferedWriter(new FileWriter(fileInDeg, true));
-//            writerClusterCoeff = new BufferedWriter(new FileWriter(new File(fileCluster), true));
-//            writerShortestPath = new BufferedWriter(new FileWriter(new File(fileShortestPath), true));
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
     public static void writeInDegree(String s) {
         try {
             BufferedWriter bw = new BufferedWriter(new FileWriter(new File(fileInDeg), true));
@@ -37,14 +23,6 @@ public class ReportWriter {
             e.printStackTrace();
         }
     }
-
-//    public static void closeInDegreeWriter() {
-//        try {
-//            writerInDeg.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
 
     public static void writeClusterCoefficient(double coeff) {
         try {
@@ -56,14 +34,6 @@ public class ReportWriter {
         }
     }
 
-//    public static void closeClusterCoefficientWriter() {
-//        try {
-//            writerClusterCoeff.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
     public static void writeShortestPath(double length) {
         try {
             BufferedWriter bw = new BufferedWriter(new FileWriter(new File(fileShortestPath), true));
@@ -73,12 +43,4 @@ public class ReportWriter {
             e.printStackTrace();
         }
     }
-
-//    public static void closeShortestPathWriter() {
-//        try {
-//            writerShortestPath.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
 }
