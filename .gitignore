@@ -1,5 +1,4 @@
 .idea/
 out/
 src/META-INF/
-.DS_Store
-graphStats/.DS_Store
+*.DS_Store
