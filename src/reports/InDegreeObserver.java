@@ -84,15 +84,15 @@ public class InDegreeObserver implements Control
 		SortedSet<Integer> sortedKeys = new TreeSet<Integer>(dist.keySet());
 		for(int i = 0; i <= sortedKeys.last(); i++){
 			if(sortedKeys.contains(i)) {
-//					System.out.println(i + " " + dist.get(i));
+				System.out.println(i + " " + dist.get(i));
 				ReportWriter.writeInDegree(i + " " + dist.get(i) + "\n");
 			}
 			else {
-//					System.out.println(i + " " + 0);
+				System.out.println(i + " " + 0);
 				ReportWriter.writeInDegree(i + " " + 0 + "\n");
 			}
 		}
-//		ReportWriter.closeInDegreeWriter();
+
 
 		return false;
 	}

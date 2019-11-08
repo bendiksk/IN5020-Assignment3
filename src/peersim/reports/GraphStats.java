@@ -103,7 +103,7 @@ public GraphStats(String name) {
 * @see Clustering
 */
 public boolean execute() {
-//		System.out.print(name+": ");
+    System.out.print(name+": ");
 
 	IncrementalStats stats = new IncrementalStats();
 	updateGraph();
@@ -144,9 +144,6 @@ public boolean execute() {
 		ReportWriter.writeShortestPath(stats.getAverage());
 	}
 	System.out.println();
-
-//	ReportWriter.closeClusterCoefficientWriter();
-//	ReportWriter.closeShortestPathWriter();
 
 	return false;
 }
