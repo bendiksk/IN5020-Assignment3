@@ -31,18 +31,18 @@ protocol.gossip gossip.BasicShuffle
 	period CYCLE
 }
 
-init.wire WireStar
-{
-	protocol gossip
-}
+#init.wire WireStar
+#{
+#	protocol gossip
+#}
 
 # This initializes the topology as a ring. Use should also use WireStar to
 # initialize it as a star.
-#init.wire WireRingLattice
-#{
-#	protocol gossip
-#	k 1
-#}
+init.wire WireRingLattice
+{
+	protocol gossip
+	k 1
+}
 
 init.sch CDScheduler
 {
