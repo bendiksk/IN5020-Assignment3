@@ -2,6 +2,7 @@ set terminal png enhanced
 set output 'plot4.png'
 
 set title "In-degree distribution"
+set xrange [0:100]
 set xlabel "in-degree"
 set ylabel "number of nodes"
 set key right top
