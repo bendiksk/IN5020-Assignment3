@@ -146,13 +146,13 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
             case SHUFFLE_REQUEST:
 				//	  1. If Q is waiting for a response from a shuffling initiated in a previous cycle, send back to P a message rejecting the shuffle request;
 				if (awaitingReply) {
-					System.out.printf("Event: %s, NodeID: %s\t-REJECTED-\n", message.getType(), thisNode.getID());
+//					System.out.printf("Event: %s, NodeID: %s\t-REJECTED-\n", message.getType(), thisNode.getID());
 					replyMessage = new GossipMessage(thisNode, new ArrayList<>());
 					replyMessage.setType(MessageType.SHUFFLE_REJECTED);
 					tr.send(thisNode, thatNode, replyMessage, pid);
 					break;
 				}
-				System.out.printf("Event: %s, NodeID: %s, Shuffle/Nbs: %s/%s\n", message.getType(), thisNode.getID(), shuffleList.size(),degree());
+//				System.out.printf("Event: %s, NodeID: %s, Shuffle/Nbs: %s/%s\n", message.getType(), thisNode.getID(), shuffleList.size(),degree());
 				//	  2. Q selects a random subset of size l of its own neighbors;
 				ArrayList<Entry> subset = createRandomSubset(thatNode, l);
 
@@ -170,7 +170,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 
             // If the message is a shuffle reply:
             case SHUFFLE_REPLY:
-				System.out.printf("Event: %s, NodeID: %s, Shuffle/Nbs: %s/%s\n", message.getType(), thisNode.getID(), shuffleList.size(),degree());
+//				System.out.printf("Event: %s, NodeID: %s, Shuffle/Nbs: %s/%s\n", message.getType(), thisNode.getID(), shuffleList.size(),degree());
                 //	  1. In this case Q initiated a shuffle with P and is receiving a response containing a subset of P's neighbors
                 //	  2. Q updates its cache to include the neighbors sent by P:
                 addToCache(shuffleList);
@@ -180,7 +180,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 
             // If the message is a shuffle rejection:
             case SHUFFLE_REJECTED:
-				System.out.printf("Event: %s, NodeID: %s\n", message.getType(), thisNode.getID());
+//				System.out.printf("Event: %s, NodeID: %s\n", message.getType(), thisNode.getID());
                 //	  1. If P was originally removed from Q's cache, add it again to the cache.
                 if (!this.contains(thatNode)) {
                     if (cache.size() >= maxSize) {
@@ -261,6 +261,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 * @param shuffleList
 	 */
 	private void addToCache(ArrayList<Entry> shuffleList) {
+		int swapped = 0;
 		for (Entry entry : shuffleList) {
 			if (this.contains(entry.getNode())) {
 			//		 - No neighbor appears twice in the cache
@@ -277,6 +278,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 				}
 				Integer swapIndex = swapSetIndices.remove(0);
 				cache.set(swapIndex, new Entry(entry.getNode()));
+				swapped ++;
 			}
 		}
 	}
