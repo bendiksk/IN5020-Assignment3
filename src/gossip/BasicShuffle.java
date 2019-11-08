@@ -67,11 +67,10 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	public BasicShuffle(String n)
 	{
 		this.awaitingReply = false;
-		this.swapSetIndices = new ArrayList<>();
 		this.maxSize = Configuration.getInt(n + "." + PAR_CACHE);
 		this.l = Configuration.getInt(n + "." + PAR_L);
 		this.tid = Configuration.getPid(n + "." + PAR_TRANSPORT);
-
+		this.swapSetIndices = new ArrayList<>(l);
 		cache = new ArrayList<Entry>(maxSize);
 	}
 
@@ -116,11 +115,11 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
         GossipMessage message = new GossipMessage(thisNode, subset);
         message.setType(MessageType.SHUFFLE_REQUEST);
         Transport tr = (Transport) thisNode.getProtocol(tid);
-        awaitingReply = true;
+
         tr.send(thisNode, thatNode, message, protocolID);
 		//
 		// 8. From this point on P is waiting for Q's response and will not initiate a new shuffle operation;
-		//
+		awaitingReply = true;
 		// The response from Q will be handled by the method processEvent.
 	}
 
@@ -159,8 +158,8 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 				//	  3. Q reply P's shuffle request by sending back its own subset;
 				replyMessage = new GossipMessage(thisNode, subset);
 				replyMessage.setType(MessageType.SHUFFLE_REPLY);
-
 				tr.send(thisNode, thatNode, replyMessage, pid);
+
 				//	  4. Q updates its cache to include the neighbors sent by P:
 				//		 - No neighbor appears twice in the cache
 				//		 - Use empty cache slots to add the new entries
@@ -225,8 +224,8 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 			// Fill subset with random nodes from cache which is not Q
 			ArrayList<Integer> cacheIndices = getCacheIndices(nodeToAvoid);
 			for (int i = 0; i < subsetSize; i++) {
-				int nextIndex = CommonState.r.nextInt(cacheIndices.size());
-				int randomIndex = cacheIndices.remove(nextIndex);
+				int randomIndexLookup = CommonState.r.nextInt(cacheIndices.size());
+				int randomIndex = cacheIndices.remove(randomIndexLookup);
 				// Add node to subset and remember index
 				swapSetIndices.add(randomIndex);
 				Entry newEntry = new Entry(cache.get(randomIndex).getNode());
@@ -235,6 +234,7 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 				subset.add(newEntry);
 			}
 		}
+
 		return subset;
 	}
 
@@ -261,21 +261,32 @@ public class BasicShuffle  implements Linkable, EDProtocol, CDProtocol{
 	 * @param shuffleList
 	 */
 	private void addToCache(ArrayList<Entry> shuffleList) {
+		int counter = 0;
 		for (Entry entry : shuffleList) {
 			if (this.contains(entry.getNode())) {
 			//		 - No neighbor appears twice in the cache
+				System.out.println("No add - already found in cache");
 				continue;
 			} else if(cache.size() < maxSize) {
 			//		 - Use empty cache slots to add new entries
+				System.out.println("Adding to empty slots " + counter++ + " of " + shuffleList.size());
 				cache.add(new Entry(entry.getNode()));
 			} else {
 			//		 - If the cache is full, you can replace entries among the ones originally sent to P with the new ones
 				if (swapSetIndices.size() == 0) {
 				    // CASE: No entries left to replace with the new neighbour
+					System.out.println("FUUUUUUUCK!!!");
+					for(Entry e : cache){
+						System.out.println(e.getNode().getID());
+					}
+					System.exit(-1);
                     // TODO: Maybe put node in a random cache spot instead of dismissing incoming entry?
 				    continue;
 				}
+				System.out.println("swapSetSize " + swapSetIndices.size());
+				System.out.println("Adding swap " + counter++ + " of " + shuffleList.size());
 				Integer swapIndex = swapSetIndices.remove(0);
+				System.out.println("swapSetSize " + swapSetIndices.size());
 				cache.set(swapIndex, new Entry(entry.getNode()));
 			}
 		}
