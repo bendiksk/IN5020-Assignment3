@@ -6,9 +6,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 public class ReportWriter {
-    private static String fileInDeg = "graphStats/inDegreeData.txt";
-    private static String fileCluster = "graphStats/clusteringCoefficientData.txt";
-    private static String fileShortestPath = "graphStats/shortestPathData.txt";
+    private static String fileInDeg = "graphStats/inDegreeData-shuffle-ring-50cache.txt";
+    private static String fileCluster = "graphStats/clusteringCoefficientData-shuffle-ring-50cache.txt";
+    private static String fileShortestPath = "graphStats/shortestPathData-shuffle-ring-50cache.txt";
 
     private static int clusterCoeffCounter = 0;
     private static int shortestPathCounter = 0;
